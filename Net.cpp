@@ -1,5 +1,5 @@
 #include "Net.h"
-Net::Net() : prob_conn(65), count_neuro(11), pow_con(0){}
+Net::Net() : prob_conn(100), count_neuro(11), pow_con(1.18){}
 
 std::pair<int, int> Net:: ind_neuro(int index){
     int i = index / count_neuro;
@@ -13,37 +13,39 @@ std::pair<int, int> Net:: ind_neuro(int index){
     std::pair<int, int> res(i, j);
     return res;
 }
+
 void Net::Run_tt(Neuron_Izik& a, int time){ //реализация метода Рунге-Кутта для определенного нейрона в конкретную единицу времени
-    if (a.I_syn[time] != 0){
-        a.K1_x = a.K_x(a.x_old, a.y_old, time);
-        a.K2_x = a.K_x(a.x_old + h / 2, a.y_old + h / 2 * a.K1_x, time);
-        a.K3_x = a.K_x(a.x_old + h / 2, a.y_old + h / 2 * a.K2_x, time);
-        a.K4_x = a.K_x(a.x_old + h, a.y_old + h * a.K3_x, time);
-
-        a.x = a.x_old + (a.K1_x + 2 * a.K2_x + 2 * a.K3_x + a.K4_x) * h / 6;
-
-        a.K1_y = a.K_y(a.x_old, a.y_old);
-        a.K2_y = a.K_y(a.x_old + h / 2, a.y_old + h / 2 * a.K1_y);
-        a.K3_y = a.K_y(a.x_old + h / 2, a.y_old + h / 2 * a.K2_y);
-        a.K4_y = a.K_y(a.x_old + h, a.y_old + h * a.K3_y);
-
-        a.y = a.y_old + (a.K1_y + 2 * a.K2_y + 2 * a.K3_y + a.K4_y) * h / 6;
-
-        if (a.x > a.V_peak) { // условие генерации спайка
-            if (time < N_sim - 1) {
-                for (auto it = net_for_post[a.i].begin(); it != net_for_post[a.i].end(); ++it) {
-                    neurons[ind_neuro(it->first).first][ind_neuro(it->first).second].I_syn[time + 1] += a.y * it->second;
-                }
-            }
-            a.x = c;
-            a.y += d;
-            time_spike[a.i].push_back(time);
-        }
-        a.V.push_back(a.x);
-        a.U.push_back(a.y);
-        a.x_old = a.x;
-        a.y_old = a.y;
+    if ((a.I_syn[time] > 0) && a.i != 61){
+        bool k = true;
     }
+    a.K1_x = a.K_x(a.x_old, a.y_old, time);
+    a.K2_x = a.K_x(a.x_old + h / 2, a.y_old + h / 2 * a.K1_x, time);
+    a.K3_x = a.K_x(a.x_old + h / 2, a.y_old + h / 2 * a.K2_x, time);
+    a.K4_x = a.K_x(a.x_old + h, a.y_old + h * a.K3_x, time);
+
+    a.x = a.obstacle * (a.x_old + (a.K1_x + 2 * a.K2_x + 2 * a.K3_x + a.K4_x) * h / 6 + a.I_syn[time]);
+
+    a.K1_y = a.K_y(a.x_old, a.y_old);
+    a.K2_y = a.K_y(a.x_old + h / 2, a.y_old + h / 2 * a.K1_y);
+    a.K3_y = a.K_y(a.x_old + h / 2, a.y_old + h / 2 * a.K2_y);
+    a.K4_y = a.K_y(a.x_old + h, a.y_old + h * a.K3_y);
+
+    a.y = a.obstacle *  (a.y_old + (a.K1_y + 2 * a.K2_y + 2 * a.K3_y + a.K4_y) * h / 6);
+
+    if (a.x > a.V_peak) { // условие генерации спайка
+        if (time < N_sim - 1) {
+            for (auto it = net_for_post[a.i].begin(); it != net_for_post[a.i].end(); ++it) {
+                 neurons[ind_neuro(it->first).first][ind_neuro(it->first).second].I_syn[time + 1] += it->second;
+            }
+        }
+        a.x = c;
+        a.y += d;
+        time_spike[a.i].push_back(time);
+    }
+    a.V.push_back(a.x);
+    a.U.push_back(a.y);
+    a.x_old = a.x;
+    a.y_old = a.y;
 }
 
 void Net::Run_Kutt(){ 
@@ -65,16 +67,20 @@ void Net::Create_net(){
             ++index;
         }
     }
-    Neuron_Izik gen(0, 20);
-    gen.i = neurons[count_neuro / 2][count_neuro / 2].i;
-    neurons[count_neuro / 2][count_neuro / 2] = gen;
+    int index_gen = neurons[count_neuro / 2][count_neuro / 2].i;
+    int index_obstacle = 40;
+    Neuron_Izik gen(20, index_gen); // создание генератора импульсов для сети нейронов
+    Neuron_Izik obstacle(1, index_obstacle); // cоздание препятствия в сети нейронов
+    neurons[count_neuro / 2][count_neuro / 2] = gen; 
+    neurons[ind_neuro(index_obstacle).first][ind_neuro(index_obstacle).second] = obstacle;
 }
 double Net::rand_pow_conn(int min, int max) {
     return min + rand() % (1000 * (max - min)) / 1000.0f;
 }
 void Net::Conn(int a, int b, int random){
-    int rand_i = 0;
-    int rand_j = 0;
+    int prob_conn_random = 100; // вероятность установление нелокальной случайной связи
+    int rand_i = 0; // рандомное значение индекса j случайного нейрона с которым устанавливается нелокальная связь
+    int rand_j = 0; // рандомное значение индекса i случайного нейрона с которым устанавливается нелокальная связь
     for (int i = -1; i < 2; ++i) { 
         for (int j = -1; j < 2; ++j) {
             if ((i == 0 && j == 0)) {
@@ -85,13 +91,14 @@ void Net::Conn(int a, int b, int random){
                 if (prob_conn >= random) {
                     //pow_con = rand_pow_conn(5, 100);
                     net_for_post[neurons[a][b].i].insert(std::pair<int, double>(neurons[a + i][b + j].i, pow_con));
-
+                } 
+                if (prob_conn_random >= random) {
                     //random = rand() % 10;
                     //rand_i = random;
                     //random = rand() % 10;
                     //rand_j = random;
                     //net_for_post[neurons[a][b].i].insert(std::pair<int, double>(neurons[rand_i][rand_j].i, pow_con)); // добавление нелокальных случайных связей
-                } 
+                }
             }
         }
     }

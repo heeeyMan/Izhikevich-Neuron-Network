@@ -1,10 +1,12 @@
 #pragma once
 #include <vector>
+#include <iostream>
 class Neuron_Izik{
 public:
     Neuron_Izik();
     Neuron_Izik(int i);
-    Neuron_Izik(double V_peak, int i_syn);
+    Neuron_Izik(int i_syn, int i);
+    Neuron_Izik(bool isObtacle, int i);
     double K_x(double x_old, double y_old, int time); // правая часть первого уравнения системы описывающей динамику мембранного потенциала нейрона Ижикевича
     double K_y(double x_old, double y_old); // правая часть второго уравнения системы описывающей динамику мембранного потенциала нейрона Ижикевича
     double I_ex; // ток внешнего воздействия
@@ -28,6 +30,7 @@ public:
     double y_old;
     double K1_x, K2_x, K3_x, K4_x;
     double K1_y, K2_y, K3_y, K4_y;
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     double h; // размер шага
     int T_sim;  // время симуляции
@@ -36,6 +39,9 @@ public:
     mutable std::vector<double> I_syn; // вектор значений синаптического тока нейрона
     std::vector<double> V; // вектор значений мембранного потенциала в каждую точку отсчета, величина N_sim
     std::vector<double> U; // вектор значений вспомогательной переменной в каждую точку отсчета, величина N_sim
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    bool obstacle; // является ли нейрон препятствием
 };
 bool operator < (const Neuron_Izik& a, const Neuron_Izik& b);
 
